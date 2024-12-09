@@ -1,9 +1,10 @@
 import express, { Request, Response } from "express";
 import { body } from "express-validator";
+import jwt from "jsonwebtoken";
 import { validateRequest, BadRequestError } from "@eaatickets/common";
+
 import { Password } from "../services/password";
 import { User } from "../models/user";
-import jwt from "jsonwebtoken";
 
 const router = express.Router();
 
@@ -11,7 +12,10 @@ router.post(
   "/api/users/signin",
   [
     body("email").isEmail().withMessage("Email must be valid"),
-    body("password").trim().notEmpty().withMessage("You must suppy a password"),
+    body("password")
+      .trim()
+      .notEmpty()
+      .withMessage("You must supply a password"),
   ],
   validateRequest,
   async (req: Request, res: Response) => {
@@ -26,11 +30,11 @@ router.post(
       existingUser.password,
       password
     );
-
     if (!passwordsMatch) {
-      throw new BadRequestError("Invalid credentials");
+      throw new BadRequestError("Invalid Credentials");
     }
 
+    // Generate JWT
     const userJwt = jwt.sign(
       {
         id: existingUser.id,
@@ -39,7 +43,11 @@ router.post(
       process.env.JWT_KEY!
     );
 
-    req.session = { jwt: userJwt };
+    // Store it on session object
+    req.session = {
+      jwt: userJwt,
+    };
+
     res.status(200).send(existingUser);
   }
 );
